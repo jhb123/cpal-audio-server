@@ -18,75 +18,9 @@ fn main() {
 }
 
 fn connection_handler(mut stream: TcpStream) -> anyhow::Result<()> {
-    let ring = HeapRb::<f32>::new(1000000 * 2);
+    //let ring = StaticRb::<f32,1024>::default();
+    let ring: HeapRb<f32> = HeapRb::new(1024);
     let (mut producer, mut consumer) = ring.split();
-
-
-
-    //let mut buf_raw = &mut [0; 2048];
-    //let mut buf: &mut [f32; 512] = &mut [0.0; 128*4];
-    // let output_data_fn = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-    //     for sample in data.iter_mut() {
-    //         *sample = match consumer.pop() {
-    //             Some(s) => {
-    //                 //println!("Outputting data");
-    //                 s
-    //             }
-    //             None => 0.0,
-    //         };
-    //     }
-    // };
-    // let output_stream = output_device.build_output_stream(
-    //     &config.into(),
-    //     output_data_fn,
-    //     err_fn,
-    //     None)?;
-
-    // println!("creating output stream for data");
-    // output_stream.play()?;
-
-    //let mut buf_reader = BufReader::new(stream);
-    println!("listening for data");
-    let mut buf: [u8; 100000] = [0; 100000];
-
-    let mut full_recording = Vec::<f32>::new();
-
-    loop {
-        // let mut line = String::new();
-        let res = stream.read(&mut buf);
-        match res {
-            Ok(size) => {
-                let deserialised = deserialise_data(&buf[0..size]);
-                match deserialised {
-                    Ok(data) => {
-
-                        let _data_type = data.message_type;
-                        let raw_data = data.message_data;
-                        println!("raw data: {} ", raw_data.len());
-                        unsafe {
-                            let (_prefix, decoded_buf, _suffix) = raw_data.align_to::<f32>();
-                            println!("Samples recieved: {}", decoded_buf.len());
-                            for &sample in decoded_buf.iter() {
-                                full_recording.push(sample)
-                            }
-                        }
-                        if data.terminate_connection == true {
-                            break;
-                        }
-                        
-                    }
-
-                    Err(_) => println!("decode error to deserialise"),
-                }
-            }
-            Err(_) => {
-                println!("no data")
-            }
-        }
-    }
-    println!("finished recording");
-    // println!("Pushing sounds");
-    println!("samples: {}",full_recording.len());
 
     let host = cpal::default_host();
     let output_device = host.default_output_device().unwrap();
@@ -95,17 +29,15 @@ fn connection_handler(mut stream: TcpStream) -> anyhow::Result<()> {
     let config = SupportedStreamConfig::new(
         1,
         cpal::SampleRate(44100),
-         cpal::SupportedBufferSize::Range { min: 14, max: 16384 }, 
-         cpal::SampleFormat::F32
+        cpal::SupportedBufferSize::Range { min: 14, max: 128 }, 
+        cpal::SampleFormat::F32
         );
     println!("{:?}",config);
 
-    full_recording.reverse();
-    
     let output_data_fn = move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
         
         for frame in data.chunks_mut(1){
-            match full_recording.pop() {
+            match consumer.pop() {
                 Some(sample) => {
                     let value: f32 = f32::from_sample(sample);
                     for sample in frame.iter_mut() {
@@ -125,13 +57,51 @@ fn connection_handler(mut stream: TcpStream) -> anyhow::Result<()> {
         err_fn,
         None)?;
 
-    println!("creating output stream for data");
     output_stream.play()?;
-    
 
-    std::thread::sleep(std::time::Duration::from_millis(4000));
+        
+    //let mut buf_reader = BufReader::new(stream);
+    println!("listening for data");
+    let mut buf: [u8; 10000] = [0; 10000];
+
+    let mut full_recording = Vec::<f32>::new();
+
+    loop {
+        // let mut line = String::new();
+        let res = stream.read(&mut buf);
+        match res {
+            Ok(size) => {
+                let deserialised = deserialise_data(&buf[0..size]);
+                match deserialised {
+                    Ok(data) => {
+
+                        let _data_type = data.message_type;
+                        let raw_data = data.message_data;
+                        unsafe {
+                            let (_prefix, decoded_buf, _suffix) = raw_data.align_to::<f32>();
+                            for &sample in decoded_buf.iter() {
+                                producer.push(sample);
+                                //full_recording.push(sample)
+
+                            }
+                        }
+                        if data.terminate_connection == true {
+                            break;
+                        }
+                        
+                    }
+
+                    Err(_) => println!("decode error to deserialise"),
+                }
+            }
+            Err(_) => {
+                println!("no data")
+            }
+        }
+    }
+    println!("finished recording");
+    println!("samples: {}",full_recording.len());
     println!("Finished");
-
     Ok(())
 }
 

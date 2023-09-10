@@ -53,14 +53,13 @@ pub fn create_audio_message<T>(input_data: &[T])-> items::Data where T:Clone {
 }
 
 pub fn serialise_data(data: &items::Data) -> Vec<u8> {
-    // this is copied from the docs:
-    // https://github.com/danburkert/snazzy/blob/master/src/lib.rs
-    let mut buf = Vec::new();
-    buf.reserve(data.encoded_len());
+    let mut buf= Vec::with_capacity(data.encoded_len());
     // this is safe since its reserved the size of the buffer
     data.encode(&mut buf).unwrap();
     buf
 }
+
+
 
 pub fn deserialise_data(buf: &[u8]) -> Result<items::Data, prost::DecodeError>{
     items::Data::decode(&mut Cursor::new(buf))
