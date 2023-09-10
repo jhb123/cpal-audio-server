@@ -9,7 +9,7 @@ Usage:
 
 The client will run for 10s. Make sure you have headphones in!
 
-# Latency measurement:
+# Latency measurement
 ## Result
 I've measured 70 milliseconds of delay between 
  - The sound being picked up by my Mac's microphone.
