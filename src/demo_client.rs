@@ -58,7 +58,7 @@ fn main() -> anyhow::Result<()> {
     println!("record what you want to say");
     //let mut buf_writer = BufWriter::new();
 
-    let dur = std::time::Duration::from_millis(1000);
+    let dur = std::time::Duration::from_millis(10000);
     let start = Instant::now();
 
     let mut buf = [0f32; 10000];
