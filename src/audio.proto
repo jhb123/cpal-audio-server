@@ -5,4 +5,5 @@ package audio.items;
 message data {
     string message_type = 1;
     bytes message_data = 2;
+    bool terminate_connection = 3;
 }

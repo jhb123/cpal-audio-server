@@ -41,7 +41,7 @@ pub fn serialise_data(data: &items::Data) -> Vec<u8> {
     //arr
 }
 
-pub fn deserialise_data(buf: &Vec<u8>) -> Result<items::Data, prost::DecodeError>{
+pub fn deserialise_data(buf: &[u8]) -> Result<items::Data, prost::DecodeError>{
     items::Data::decode(&mut Cursor::new(buf))
 }
 
