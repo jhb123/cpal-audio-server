@@ -1,8 +1,9 @@
 # Overview
 
-This is an experiment using Rocket to create a websocket.
+This is an experimental program for streaming audio. Currently, it's
+a literal echo server.
 
 Usage:
- - start the server with `cargo run`
- - Using something like Postman or websocat, connect to `ws://127.0.0.1/echo?stream`.
- - send a message and see the echo'd response!
+ - start the server with `cargo run --bin server`
+ - start the demo client with `cargo run --bin client`
+ - send a message and hear echo'd response!
