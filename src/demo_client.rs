@@ -1,8 +1,9 @@
 use std::{net::TcpStream, time::Instant};
 use std::io::Write;
 
-use audio_server::{create_audio_message, serialise_data, create_terminate_message};
-use cpal::SupportedStreamConfig;
+use audio_server::audio::items::Config;
+use audio_server::{create_audio_message, serialise, create_terminate_message, create_config_message};
+use cpal::{SupportedStreamConfig, Device, SizedSample, StreamConfig};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use ringbuf::HeapRb;
 
@@ -16,34 +17,50 @@ fn main() -> anyhow::Result<()> {
         .default_input_device()
         .expect("failed to find input device");
 
-
     println!("Using input device: \"{}\"", input_device.name()?);
 
-    // We'll try and use the same configuration between streams to keep it simple.
-    //let config: cpal::StreamConfig = input_device.default_input_config()?.into();
-    let config = SupportedStreamConfig::new(
-        1,
-        cpal::SampleRate(44100),
-         cpal::SupportedBufferSize::Range { min: 16, max: 128 }, 
-         cpal::SampleFormat::F32
-        );
+    let config = input_device.default_input_config().unwrap();
     
-    println!("{:?}",config);
+    println!("Config: {:?}",config);
 
-    
-    // The buffer to share samples
-    let ring: HeapRb<f32> = HeapRb::new(1024);
+    let _ = match &config.sample_format() {
+        cpal::SampleFormat::I8  => run::<i8>(config, &input_device),
+        cpal::SampleFormat::I16 => run::<i16>(config, &input_device),
+        cpal::SampleFormat::I32 => run::<i32>(config, &input_device),
+        cpal::SampleFormat::I64 => run::<i64>(config, &input_device),
+        cpal::SampleFormat::U8  => run::<u8>(config, &input_device),
+        cpal::SampleFormat::U16 => run::<u16>(config, &input_device),
+        cpal::SampleFormat::U32 => run::<u32>(config, &input_device),
+        cpal::SampleFormat::U64 => run::<u64>(config, &input_device),
+        cpal::SampleFormat::F32 => run::<f32>(config, &input_device),
+        cpal::SampleFormat::F64 => run::<f64>(config, &input_device),
+        _ => panic!("format not supported"),
+    };
+
+    Ok(())
+}
+
+fn err_fn(err: cpal::StreamError) {
+    eprintln!("an error occurred on stream: {}", err);
+}
+
+fn run<T> (config: SupportedStreamConfig, input_device: &Device)-> anyhow::Result<()> 
+where T: Default + Copy + SizedSample + Send + 'static
+{
+    let mut stream = TcpStream::connect("127.0.0.1:8000").unwrap();
+
+    let msg = create_config_message(&config);
+    let serialised = serialise(&msg);
+    let res = stream.write(&serialised);
+
+    let ring: HeapRb<T> = HeapRb::new(1024);
     let (mut producer, mut consumer) = ring.split();
 
-    let input_data_fn = move |data: &[f32], _: &cpal::InputCallbackInfo| {
+    let input_data_fn = move |data: &[T], _: &cpal::InputCallbackInfo| {
         producer.push_slice(data);
     };
 
 
-    println!(
-        "Attempting to build streams with f32 samples and `{:?}`.",
-        config
-    );
     let input_stream = input_device.build_input_stream(
         &config.into(),
         input_data_fn,
@@ -53,40 +70,37 @@ fn main() -> anyhow::Result<()> {
 
     input_stream.play()?;
     
-    let mut stream = TcpStream::connect("127.0.0.1:8000").unwrap();
-
     println!("record what you want to say");
     //let mut buf_writer = BufWriter::new();
 
     let dur = std::time::Duration::from_millis(10000);
     let start = Instant::now();
 
-    let mut buf = [0f32; 10000];
-
+    let mut buf: Vec<T> = vec![Default::default(); 10000];//Vec::<f32>::new();
+    
     while Instant::now() - start < dur {
 
         let num_samples = consumer.pop_slice(&mut buf);
         if num_samples != 0 {
             let msg = create_audio_message(&buf[0..num_samples]);
-            let serialised = serialise_data(&msg);
+            let serialised = serialise(&msg);
             let res = stream.write(&serialised);
             match res {
-                Ok(_) => (),
-                Err(_) => eprintln!("Oh no!"),
+                Ok(_) => {},
+                Err(_) => eprintln!("Issue writing to stream!"),
                  
             }
         }
     };
 
     let terminatation = create_terminate_message();
-    let serialised = serialise_data(&terminatation);
+    let serialised = serialise(&terminatation);
     let _ = stream.write(&serialised);
+
+    // this is cpals examples, but I don't know why. Isn't this dropped 
+    // at the end of this function anyway?
     drop(input_stream);
 
     println!("Done!");
     Ok(())
-}
-
-fn err_fn(err: cpal::StreamError) {
-    eprintln!("an error occurred on stream: {}", err);
 }
