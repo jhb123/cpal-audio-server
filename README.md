@@ -23,14 +23,8 @@ This is surprisingly high. A rough calculation of the latency involves:
  - the delay between microhones picking up the same sound. There is roughly 3ms of delay per metre which the sound travels, so this is negligible.
  - the buffered samples. A sample rate of 44100 samples/second and a buffer size of e.g. 128 samples gives 3ms. This is unlikely to be the cause.
  - the delay in cables and stray capacitance. I haven't calculated this but milliseconds is quite a lot.
- - The rust program. Putting in some printlns makes me think this only adds a few milliseconds.
-```
-before read: Ok(102µs)
-after read: Ok(5.725ms)
-deserialised: Ok(5.746ms)
-Number of samples: 512
-pushed: Ok(5.808ms)
-```
+ - The rust programs. Putting in some printlns makes me think this only adds up to a few milliseconds.
+
 
 ## Method
 This measurement requires:
