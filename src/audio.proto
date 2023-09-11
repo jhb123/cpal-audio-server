@@ -2,8 +2,26 @@ syntax = "proto3";
 
 package audio.items;
 
+enum Encoding {
+    I8 = 0;
+    I16 = 1;
+    I32 = 2;
+    I64 = 3;
+    U8 = 4;
+    U16 = 5;
+    U32 = 6;
+    U64 = 7;
+    F32 = 8;
+    F64 = 9;
+}
+
+message config {
+    Encoding encoding = 1;
+    uint32 channels = 2;
+    uint32 sample_rate = 3;
+}
+
 message data {
-    string message_type = 1;
     bytes message_data = 2;
     bool terminate_connection = 3;
 }
