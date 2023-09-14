@@ -8,7 +8,7 @@ use std::{
 };
 
 fn main() {
-    let listener = TcpListener::bind("127.0.0.1:8000").unwrap();
+    let listener = TcpListener::bind("0.0.0.0:43442").unwrap();
 
     for stream in listener.incoming() {
         println!("Connection established!");
@@ -27,14 +27,18 @@ fn connection_handler(mut stream: TcpStream) -> anyhow::Result<()> {
     let num_bytes = stream.read(&mut buf).unwrap();
     let client_config = deserialise_config(&buf[0..num_bytes]).unwrap();
 
+    println!("{:?}",client_config);
+
     let config = SupportedStreamConfig::new(
         client_config.channels as u16,
         cpal::SampleRate(client_config.sample_rate),
         cpal::SupportedBufferSize::Range { min: 14, max: 128 }, 
         decode_sample_format(client_config.encoding)
         );
+    
+    println!();
 
-    let _ = match config.sample_format() {
+    let res = match config.sample_format() {
         cpal::SampleFormat::I8 => Ok(run::<i8>(config,stream)),
         cpal::SampleFormat::I16 => Ok(run::<i16>(config,stream)),
         cpal::SampleFormat::I32 => Ok(run::<i32>(config,stream)),
@@ -48,6 +52,8 @@ fn connection_handler(mut stream: TcpStream) -> anyhow::Result<()> {
         _ => Err("Format not supported"),
     };
    
+    if res.is_err() {println!("Format not support")}
+
     println!("Finished");
     Ok(())
 }
