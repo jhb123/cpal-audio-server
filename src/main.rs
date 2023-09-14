@@ -4,28 +4,35 @@ use cpal::{traits::{DeviceTrait, HostTrait, StreamTrait}, SupportedStreamConfig,
 use ringbuf::HeapRb;
 use std::{
     io::Read,
-    net::{TcpListener, TcpStream},
+    net::UdpSocket,
 };
 
 fn main() {
-    let listener = TcpListener::bind("127.0.0.1:8000").unwrap();
+    let listener = UdpSocket::bind("0.0.0.0:43442").unwrap();
+    //listener.bin(addr)
 
-    for stream in listener.incoming() {
-        println!("Connection established!");
-
-        let stream = stream.unwrap();
-        stream.set_nodelay(true);
-        let _ = connection_handler(stream);
+    loop {
+        connection_handler(listener.try_clone().unwrap());
     }
+
+    // for stream in listener.incoming() {
+    //     println!("Connection established!");
+
+    //     let stream = stream.unwrap();
+    //     stream.set_nodelay(true);
+    //     let _ = connection_handler(stream);
+    // }
 }
 
-fn connection_handler(mut stream: TcpStream) -> anyhow::Result<()> {
+fn connection_handler(mut stream: UdpSocket) -> anyhow::Result<()> {
     //let ring = StaticRb::<f32,1024>::default();
 
     // first thing that happens is a configuration of the audio is recieved.
     let mut buf = [0;1000];
-    let num_bytes = stream.read(&mut buf).unwrap();
+    let num_bytes = stream.recv(&mut buf).unwrap();
     let client_config = deserialise_config(&buf[0..num_bytes]).unwrap();
+
+    println!("{:?}",client_config);
 
     let config = SupportedStreamConfig::new(
         client_config.channels as u16,
@@ -56,8 +63,8 @@ fn err_fn(err: cpal::StreamError) {
     eprintln!("an error occurred on stream: {}", err);
 }
 
-fn run<T>(config: SupportedStreamConfig, mut stream: TcpStream)-> anyhow::Result<()> 
-where T: Default + Copy + SizedSample + Send + 'static
+fn run<T>(config: SupportedStreamConfig, mut stream: UdpSocket)-> anyhow::Result<()> 
+where T: Default + Copy + SizedSample + Send + std::fmt::Display + 'static
 {
 
     let channels = config.channels();
@@ -95,25 +102,33 @@ where T: Default + Copy + SizedSample + Send + 'static
 
     loop {
         // let mut line = String::new();
-        let res = stream.read(&mut buf);
+        let res = stream.recv(&mut buf);
         match res {
             Ok(size) => {
-                let deserialised = deserialise_data(&buf[0..size]);
-                match deserialised {
-                    Ok(data) => {
+                if size > 0 {
+                    let deserialised = deserialise_data(&buf[0..size]);
+                    match deserialised {
+                        Ok(data) => {
 
-                        let raw_data = data.message_data;
-                        unsafe {
-                            let (_prefix, decoded_buf, _suffix) = raw_data.align_to::<T>();
-                            for &sample in decoded_buf.iter() {
-                                producer.push(sample);
+                            let raw_data = data.message_data;
+                            unsafe {
+                                let (_prefix, decoded_buf, _suffix) = raw_data.align_to::<T>();
+                                // println!("First sample {}", decoded_buf.first().);
+                                match decoded_buf.first() {
+                                    Some(num) => {println!("First sample {}",num)}
+                                    None => {},
+                                    
+                                }
+                                for &sample in decoded_buf.iter() {
+                                    producer.push(sample);
+                                }
+                            }
+                            if data.terminate_connection == true {
+                                break;
                             }
                         }
-                        if data.terminate_connection == true {
-                            break;
-                        }
+                        Err(_) => println!("decode error to deserialise"),
                     }
-                    Err(_) => println!("decode error to deserialise"),
                 }
             }
             Err(_) => {

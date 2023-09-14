@@ -1,4 +1,4 @@
-use std::{net::TcpStream, time::Instant};
+use std::{net::UdpSocket, time::Instant};
 use std::io::Write;
 
 use audio_server::audio::items::Config;
@@ -47,11 +47,12 @@ fn err_fn(err: cpal::StreamError) {
 fn run<T> (config: SupportedStreamConfig, input_device: &Device)-> anyhow::Result<()> 
 where T: Default + Copy + SizedSample + Send + 'static
 {
-    let mut stream = TcpStream::connect("127.0.0.1:8000").unwrap();
+    let mut stream = UdpSocket::bind("127.0.0.1:43443").unwrap();
+    stream.connect("127.0.0.1:43442");
 
     let msg = create_config_message(&config);
     let serialised = serialise(&msg);
-    let res = stream.write(&serialised);
+    let res = stream.send(&serialised)?;
 
     let ring: HeapRb<T> = HeapRb::new(1024);
     let (mut producer, mut consumer) = ring.split();
@@ -84,7 +85,7 @@ where T: Default + Copy + SizedSample + Send + 'static
         if num_samples != 0 {
             let msg = create_audio_message(&buf[0..num_samples]);
             let serialised = serialise(&msg);
-            let res = stream.write(&serialised);
+            let res = stream.send(&serialised);
             match res {
                 Ok(_) => {},
                 Err(_) => eprintln!("Issue writing to stream!"),
@@ -95,7 +96,7 @@ where T: Default + Copy + SizedSample + Send + 'static
 
     let terminatation = create_terminate_message();
     let serialised = serialise(&terminatation);
-    let _ = stream.write(&serialised);
+    let _ = stream.send(&serialised);
 
     // this is cpals examples, but I don't know why. Isn't this dropped 
     // at the end of this function anyway?
