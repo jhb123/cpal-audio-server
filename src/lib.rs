@@ -1,3 +1,4 @@
+#![feature(generic_const_exprs)]
 #![feature(vec_into_raw_parts)]
 
 pub mod audio {
@@ -6,9 +7,10 @@ pub mod audio {
     }
 }
 
-use std::{mem::size_of, io::Cursor};
-use audio::items;
+use std::{mem::size_of, io::{Cursor, ErrorKind}, error::Error};
+use audio::items::{self, Config};
 use cpal::{SampleFormat, SupportedStreamConfig};
+use eio::{WriteExt, FromBytes};
 use prost::Message;
 
 pub fn create_terminate_message()-> items::Data {
@@ -23,7 +25,11 @@ pub fn create_config_message(cpal_config: &SupportedStreamConfig)-> items::Confi
     cfg.encoding = encode_sample_format(&cpal_config.sample_format());
     cfg.channels = cpal_config.channels() as u32;
     cfg.sample_rate = cpal_config.sample_rate().0;
-
+    if cfg!(target_endian = "little") {
+        cfg.endian = items::Endian::Little.into();
+    } else {
+        cfg.endian = items::Endian::Big.into();
+    }
     cfg
 
 }
