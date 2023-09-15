@@ -15,10 +15,16 @@ enum Encoding {
     F64 = 9;
 }
 
+enum Endian {
+    Little = 0;
+    Big = 1;
+}
+
 message config {
     Encoding encoding = 1;
     uint32 channels = 2;
     uint32 sample_rate = 3;
+    Endian endian = 4;
 }
 
 message data {
