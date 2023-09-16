@@ -1,10 +1,8 @@
 use std::{net::UdpSocket, time::Instant};
-use std::io::Write;
 
-use audio_server::audio::items::Config;
 use audio_server::{create_audio_message, serialise, create_terminate_message, create_config_message};
 use clap::Parser;
-use cpal::{SupportedStreamConfig, Device, SizedSample, StreamConfig};
+use cpal::{SupportedStreamConfig, Device, SizedSample};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use ringbuf::HeapRb;
 

@@ -7,10 +7,9 @@ pub mod audio {
     }
 }
 
-use std::{mem::size_of, io::{Cursor, ErrorKind}, error::Error};
-use audio::items::{self, Config};
+use std::{mem::size_of, io::Cursor, error::Error};
+use audio::items::{self};
 use cpal::{SampleFormat, SupportedStreamConfig};
-use eio::{WriteExt, FromBytes};
 use prost::Message;
 
 pub fn create_terminate_message()-> items::Data {
