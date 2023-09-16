@@ -67,7 +67,7 @@ where T: SizedSample + Send + FromBytes< {size_of::<T>()} > + 'static
     let config = SupportedStreamConfig::new(
         client_config.channels as u16,
         cpal::SampleRate(client_config.sample_rate),
-        cpal::SupportedBufferSize::Range { min: 14, max: 512 }, 
+        cpal::SupportedBufferSize::Range { min: 14, max: 128 }, 
         decode_sample_format(client_config.encoding)
         );
 
