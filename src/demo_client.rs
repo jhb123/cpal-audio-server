@@ -1,14 +1,26 @@
 use std::{net::UdpSocket, time::Instant};
-use std::io::Write;
 
-use audio_server::audio::items::Config;
 use audio_server::{create_audio_message, serialise, create_terminate_message, create_config_message};
-use cpal::{SupportedStreamConfig, Device, SizedSample, StreamConfig};
+use clap::Parser;
+use cpal::{SupportedStreamConfig, Device, SizedSample};
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use ringbuf::HeapRb;
 
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    /// IP address of the host
+    #[arg(short, long, default_value = "127.0.0.1" )]
+    ip: String,
+}
+
 fn main() -> anyhow::Result<()> {
-    //let opt = Opt::parse();
+    let args = Args::parse();
+    
+
+    // for _ in 0..args.count {
+    //     println!("Hello {}!", args.name)
+    // }
 
     let host = cpal::default_host();
 
@@ -24,16 +36,16 @@ fn main() -> anyhow::Result<()> {
     println!("Config: {:?}",config);
 
     let _ = match &config.sample_format() {
-        cpal::SampleFormat::I8  => run::<i8>(config, &input_device),
-        cpal::SampleFormat::I16 => run::<i16>(config, &input_device),
-        cpal::SampleFormat::I32 => run::<i32>(config, &input_device),
-        cpal::SampleFormat::I64 => run::<i64>(config, &input_device),
-        cpal::SampleFormat::U8  => run::<u8>(config, &input_device),
-        cpal::SampleFormat::U16 => run::<u16>(config, &input_device),
-        cpal::SampleFormat::U32 => run::<u32>(config, &input_device),
-        cpal::SampleFormat::U64 => run::<u64>(config, &input_device),
-        cpal::SampleFormat::F32 => run::<f32>(config, &input_device),
-        cpal::SampleFormat::F64 => run::<f64>(config, &input_device),
+        cpal::SampleFormat::I8  => run::<i8>(config, &input_device, args.ip),
+        cpal::SampleFormat::I16 => run::<i16>(config, &input_device, args.ip),
+        cpal::SampleFormat::I32 => run::<i32>(config, &input_device, args.ip),
+        cpal::SampleFormat::I64 => run::<i64>(config, &input_device, args.ip),
+        cpal::SampleFormat::U8  => run::<u8>(config, &input_device, args.ip),
+        cpal::SampleFormat::U16 => run::<u16>(config, &input_device, args.ip),
+        cpal::SampleFormat::U32 => run::<u32>(config, &input_device, args.ip),
+        cpal::SampleFormat::U64 => run::<u64>(config, &input_device, args.ip),
+        cpal::SampleFormat::F32 => run::<f32>(config, &input_device, args.ip),
+        cpal::SampleFormat::F64 => run::<f64>(config, &input_device, args.ip),
         _ => panic!("format not supported"),
     };
 
@@ -44,11 +56,11 @@ fn err_fn(err: cpal::StreamError) {
     eprintln!("an error occurred on stream: {}", err);
 }
 
-fn run<T> (config: SupportedStreamConfig, input_device: &Device)-> anyhow::Result<()> 
+fn run<T> (config: SupportedStreamConfig, input_device: &Device, ip: String)-> anyhow::Result<()> 
 where T: Default + Copy + SizedSample + Send + 'static
 {
-    let mut stream = UdpSocket::bind("127.0.0.1:43443").unwrap();
-    stream.connect("127.0.0.1:43442");
+    let mut stream = UdpSocket::bind("0.0.0.0:43443").unwrap();
+    stream.connect(ip+":43442");
 
     let msg = create_config_message(&config);
     let serialised = serialise(&msg);

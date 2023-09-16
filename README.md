@@ -1,13 +1,20 @@
 # Overview
 
-This is an experimental program for streaming audio. Currently, it's a literal echo server. It runs on `127.0.0.1:8000`.
+This is an experimental program for streaming audio from a client to a server.
 
-Usage:
+Simple usage:
  - start the server with `cargo run --bin server`
  - start the demo client with `cargo run --bin client`
  - send a message and hear echo'd response!
 
 The client will run for 10s. Make sure you have headphones in!
+
+## Setup Info
+This project is using the nightly version of rust. Use `rustup default nightly` to be able to build the clients and server.
+
+The server listens on `0.0.0.0:43442`.
+
+The IP address of the server can be passed to the demo client like so: `cargo run --bin client -- --ip 127.0.0.1`
 
 # Latency measurement
 ## Result
