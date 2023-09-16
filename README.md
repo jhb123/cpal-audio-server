@@ -1,13 +1,15 @@
 # Overview
 
-This is an experimental program for streaming audio. Currently, it's a literal echo server. It runs on `127.0.0.1:8000`.
+This is an experimental program for streaming audio. Currently, it's a literal echo server. It runs on `0.0.0.1:43442`.
 
-Usage:
+Simple usage:
  - start the server with `cargo run --bin server`
  - start the demo client with `cargo run --bin client`
  - send a message and hear echo'd response!
 
 The client will run for 10s. Make sure you have headphones in!
+
+The IP address of the server can be passed to the demo client like so: `cargo run --bin client -- --ip 127.0.0.1`
 
 # Latency measurement
 ## Result
